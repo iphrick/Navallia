@@ -25,3 +25,9 @@ Thumbs.db
 # Build
 build/
 dist/
+
+# Dev tools / internal
+.claude/
+scratch/
+explorer.html
+cors.json
