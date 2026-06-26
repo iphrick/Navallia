@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>navallia — Explorer</title>
+<style>
+  :root { color-scheme: light; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    background: #1e1e1e;
+    color: #cccccc;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Title bar */
+  .titlebar {
+    background: #323233;
+    color: #cccccc;
+    padding: 0 12px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    border-bottom: 1px solid #111;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .titlebar .icon { font-size: 14px; }
+  .titlebar .title { font-weight: 500; color: #cccccc; }
+  .titlebar .badge {
+    background: #0078d4;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-left: auto;
+  }
+
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Activity bar */
+  .activity-bar {
+    width: 48px;
+    background: #333333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+    gap: 2px;
+    border-right: 1px solid #111;
+    flex-shrink: 0;
+  }
+  .activity-bar button {
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    color: #858585;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: color 0.1s;
+  }
+  .activity-bar button.active {
+    color: #ffffff;
+  }
+  .activity-bar button.active::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 24px;
+    background: #0078d4;
+    border-radius: 0 2px 2px 0;
+  }
+  .activity-bar button:hover { color: #cccccc; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px;
+    background: #252526;
+    border-right: 1px solid #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 10px 12px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #bbbbbb;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-header .actions {
+    display: flex;
+    gap: 2px;
+  }
+  .sidebar-header .actions button {
+    background: none;
+    border: none;
+    color: #858585;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 3px;
+    border-radius: 3px;
+  }
+  .sidebar-header .actions button:hover { color: #cccccc; background: #3a3a3a; }
+
+  /* Search box */
+  .search-box {
+    padding: 6px 8px;
+    border-bottom: 1px solid #1e1e1e;
+  }
+  .search-box input {
+    width: 100%;
+    background: #3c3c3c;
+    border: 1px solid #3c3c3c;
+    color: #cccccc;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+  }
+  .search-box input:focus { border-color: #0078d4; }
+  .search-box input::placeholder { color: #6b6b6b; }
+
+  /* File tree */
+  .tree {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+  }
+  .tree::-webkit-scrollbar { width: 6px; }
+  .tree::-webkit-scrollbar-track { background: transparent; }
+  .tree::-webkit-scrollbar-thumb { background: #424242; border-radius: 3px; }
+
+  .tree-item {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding-right: 8px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+  }
+  .tree-item:hover { background: #2a2d2e; }
+  .tree-item.selected { background: #094771; color: #ffffff; }
+  .tree-item.selected .file-icon { color: #ffffff; }
+
+  .tree-item .indent { display: inline-block; flex-shrink: 0; }
+  .tree-item .arrow {
+    width: 16px;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: #858585;
+    text-align: center;
+    transition: transform 0.1s;
+  }
+  .tree-item .arrow.open { transform: rotate(90deg); }
+  .tree-item .arrow.leaf { color: transparent; }
+
+  .tree-item .file-icon {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 14px;
+  }
+  .tree-item .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #cccccc;
+  }
+  .tree-item.selected .label { color: #ffffff; }
+
+  /* Editor area */
+  .editor {
+    flex: 1;
+    background: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    background: #252526;
+    border-bottom: 1px solid #1e1e1e;
+    overflow-x: auto;
+    flex-shrink: 0;
+    height: 35px;
+  }
+  .tabs::-webkit-scrollbar { height: 3px; }
+  .tabs::-webkit-scrollbar-thumb { background: #424242; }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 35px;
+    border-right: 1px solid #1e1e1e;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 12px;
+    color: #969696;
+    background: #2d2d2d;
+    flex-shrink: 0;
+    position: relative;
+    min-width: 100px;
+  }
+  .tab.active {
+    background: #1e1e1e;
+    color: #cccccc;
+    border-top: 1px solid #0078d4;
+  }
+  .tab:hover { color: #cccccc; }
+  .tab .close {
+    opacity: 0;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 3px;
+    padding: 1px 3px;
+  }
+  .tab:hover .close, .tab.active .close { opacity: 1; }
+  .tab .close:hover { background: #4a4a4a; }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #858585;
+    border-bottom: 1px solid #1e1e1e;
+    background: #1e1e1e;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .breadcrumb span { cursor: pointer; }
+  .breadcrumb span:hover { color: #cccccc; }
+  .breadcrumb .sep { color: #555; }
+
+  /* Code area */
+  .code-area {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 0;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .code-area::-webkit-scrollbar { width: 10px; height: 10px; }
+  .code-area::-webkit-scrollbar-track { background: #1e1e1e; }
+  .code-area::-webkit-scrollbar-thumb { background: #424242; }
+
+  .code-line {
+    display: flex;
+    min-height: 22px;
+    align-items: center;
+  }
+  .code-line:hover { background: #2a2d2e; }
+  .line-num {
+    width: 50px;
+    text-align: right;
+    padding-right: 16px;
+    color: #4e4e4e;
+    flex-shrink: 0;
+    font-size: 12px;
+    user-select: none;
+  }
+  .line-content {
+    padding-left: 4px;
+    white-space: pre;
+    color: #d4d4d4;
+  }
+
+  /* Welcome screen */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    gap: 12px;
+    height: 100%;
+  }
+  .welcome .big-icon { font-size: 64px; opacity: 0.3; }
+  .welcome h2 { font-size: 18px; color: #666; font-weight: 400; }
+  .welcome p { font-size: 12px; color: #555; }
+
+  /* Status bar */
+  .statusbar {
+    height: 22px;
+    background: #007acc;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 12px;
+    font-size: 11px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .statusbar .right { margin-left: auto; display: flex; gap: 12px; }
+
+  /* Highlight colors */
+  .kw { color: #569cd6; }
+  .fn { color: #dcdcaa; }
+  .str { color: #ce9178; }
+  .cmt { color: #6a9955; }
+  .num { color: #b5cea8; }
+  .type { color: #4ec9b0; }
+  .var { color: #9cdcfe; }
+  .op { color: #d4d4d4; }
+  .prop { color: #9cdcfe; }
+  .dec { color: #c586c0; }
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <span class="icon">📁</span>
+  <span class="title">navallia — Cowork Explorer</span>
+  <span class="badge">Next.js</span>
+</div>
+
+<div class="main">
+  <!-- Activity Bar -->
+  <div class="activity-bar">
+    <button class="active" title="Explorer" onclick="setActivity(this)">📂</button>
+    <button title="Buscar" onclick="setActivity(this)">🔍</button>
+    <button title="Git" onclick="setActivity(this)">⎇</button>
+    <button title="Extensões" onclick="setActivity(this)">🧩</button>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      Explorer
+      <div class="actions">
+        <button title="Novo arquivo">+</button>
+        <button title="Nova pasta">🗂</button>
+        <button title="Colapsar tudo">⊟</button>
+      </div>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Filtrar arquivos..." oninput="filterTree(this.value)">
+    </div>
+    <div class="tree" id="tree"></div>
+  </div>
+
+  <!-- Editor -->
+  <div class="editor">
+    <div class="tabs" id="tabs"></div>
+    <div class="breadcrumb" id="breadcrumb" style="display:none"></div>
+    <div id="editorContent" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="welcome">
+        <div class="big-icon">⚓</div>
+        <h2>navallia</h2>
+        <p>Selecione um arquivo na árvore para visualizar</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span>🔀 main</span>
+  <span>⚠ 0</span>
+  <span>⊘ 0</span>
+  <div class="right">
+    <span id="statusFile">Next.js 15 · TypeScript · Firebase</span>
+    <span>UTF-8</span>
+    <span>Ln 1, Col 1</span>
+  </div>
+</div>
+
+<script>
+const FILE_ICONS = {
+  tsx: '⚛', ts: '🔷', js: '🟨', jsx: '⚛',
+  json: '📋', md: '📄', css: '🎨', scss: '🎨',
+  html: '🌐', svg: '🖼', png: '🖼', jpg: '🖼',
+  mjs: '🟨', mts: '🔷', rules: '📜', sh: '⚙',
+};
+function getIcon(name, isDir) {
+  if (isDir) return '📁';
+  const ext = name.split('.').pop().toLowerCase();
+  if (name.startsWith('.env')) return '🔑';
+  return FILE_ICONS[ext] || '📄';
+}
+
+const FS = {
+  name: 'navallia', type: 'dir', children: [
+    { name: '.env.local', type: 'file' },
+    { name: '.env.local.example', type: 'file' },
+    { name: 'cors.json', type: 'file' },
+    { name: 'firebase.json', type: 'file' },
+    { name: 'firestore.indexes.json', type: 'file' },
+    { name: 'firestore.rules', type: 'file' },
+    { name: 'next.config.ts', type: 'file' },
+    { name: 'package.json', type: 'file' },
+    { name: 'postcss.config.mjs', type: 'file' },
+    { name: 'storage.rules', type: 'file' },
+    { name: 'tailwind.config.ts', type: 'file' },
+    { name: 'tsconfig.json', type: 'file' },
+    { name: 'README.md', type: 'file' },
+    { name: 'public', type: 'dir', children: [
+      { name: 'manifest.json', type: 'file' },
+      { name: 'offline.html', type: 'file' },
+      { name: 'sw.js', type: 'file' },
+      { name: 'icons', type: 'dir', children: [
+        { name: 'icon.svg', type: 'file' },
+      ]},
+    ]},
+    { name: 'src', type: 'dir', open: true, children: [
+      { name: 'app', type: 'dir', open: true, children: [
+        { name: 'globals.css', type: 'file' },
+        { name: 'layout.tsx', type: 'file' },
+        { name: 'page.tsx', type: 'file' },
+        { name: '(admin)', type: 'dir', open: true, children: [
+          { name: 'layout.tsx', type: 'file' },
+          { name: 'loading.tsx', type: 'file' },
+          { name: 'agenda', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: '[id]', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          ]},
+          { name: 'barbeiros', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: '[id]', type: 'dir', children: [
+              { name: 'page.tsx', type: 'file' },
+              { name: 'editar', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            ]},
+          ]},
+          { name: 'clientes', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: 'dashboard', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: '[id]', type: 'dir', children: [
+              { name: 'page.tsx', type: 'file' },
+              { name: 'editar', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            ]},
+          ]},
+          { name: 'comunicacao', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'configuracoes', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'dashboard', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'estoque', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          ]},
+          { name: 'fidelidade', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'financeiro', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          ]},
+          { name: 'onboarding', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'relatorios', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'servicos', type: 'dir', children: [
+            { name: 'page.tsx', type: 'file' },
+            { name: 'novo', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: 'dashboard', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            { name: '[id]', type: 'dir', children: [
+              { name: 'page.tsx', type: 'file' },
+              { name: 'editar', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+            ]},
+          ]},
+        ]},
+        { name: '(auth)', type: 'dir', children: [
+          { name: 'layout.tsx', type: 'file' },
+          { name: 'forgot-password', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'login', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'register', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+        ]},
+        { name: 'agendar', type: 'dir', children: [
+          { name: '[slug]', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+        ]},
+        { name: 'api', type: 'dir', children: [
+          { name: 'store-file', type: 'dir', children: [{ name: 'route.ts', type: 'file' }]},
+          { name: 'upload-logo', type: 'dir', children: [{ name: 'route.ts', type: 'file' }]},
+        ]},
+        { name: 'master', type: 'dir', children: [
+          { name: 'layout.tsx', type: 'file' },
+          { name: 'assinaturas', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'barbearias', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+          { name: 'dashboard', type: 'dir', children: [{ name: 'page.tsx', type: 'file' }]},
+        ]},
+      ]},
+      { name: 'components', type: 'dir', children: [
+        { name: 'agenda', type: 'dir', children: [{ name: 'AppointmentForm.tsx', type: 'file' }]},
+        { name: 'barbers', type: 'dir', children: [{ name: 'BarberForm.tsx', type: 'file' }]},
+        { name: 'booking', type: 'dir', children: [{ name: 'PublicBookingFlow.tsx', type: 'file' }]},
+        { name: 'clients', type: 'dir', children: [{ name: 'ClientForm.tsx', type: 'file' }]},
+        { name: 'dashboard', type: 'dir', children: [
+          { name: 'MetricCard.tsx', type: 'file' },
+          { name: 'RankingList.tsx', type: 'file' },
+          { name: 'RevenueChart.tsx', type: 'file' },
+        ]},
+        { name: 'financial', type: 'dir', children: [{ name: 'TransactionForm.tsx', type: 'file' }]},
+        { name: 'layout', type: 'dir', children: [
+          { name: 'AdminLayout.tsx', type: 'file' },
+          { name: 'Header.tsx', type: 'file' },
+          { name: 'Sidebar.tsx', type: 'file' },
+        ]},
+        { name: 'services', type: 'dir', children: [{ name: 'ServiceForm.tsx', type: 'file' }]},
+        { name: 'shared', type: 'dir', children: [
+          { name: 'RouteGuard.tsx', type: 'file' },
+          { name: 'ToastContainer.tsx', type: 'file' },
+        ]},
+        { name: 'stock', type: 'dir', children: [
+          { name: 'MovementModal.tsx', type: 'file' },
+          { name: 'ProductForm.tsx', type: 'file' },
+        ]},
+        { name: 'ui', type: 'dir', children: [
+          { name: 'Avatar.tsx', type: 'file' },
+          { name: 'Button.tsx', type: 'file' },
+          { name: 'Card.tsx', type: 'file' },
+          { name: 'EmptyState.tsx', type: 'file' },
+          { name: 'Input.tsx', type: 'file' },
+          { name: 'Loading.tsx', type: 'file' },
+          { name: 'PageContainer.tsx', type: 'file' },
+        ]},
+      ]},
+      { name: 'contexts', type: 'dir', children: [
+        { name: 'AuthContext.tsx', type: 'file' },
+        { name: 'ThemeContext.tsx', type: 'file' },
+        { name: 'ToastContext.tsx', type: 'file' },
+      ]},
+      { name: 'firebase', type: 'dir', children: [
+        { name: 'auth.ts', type: 'file' },
+        { name: 'config.ts', type: 'file' },
+        { name: 'firestore.ts', type: 'file' },
+        { name: 'index.ts', type: 'file' },
+      ]},
+      { name: 'hooks', type: 'dir', children: [
+        { name: 'useAppointments.ts', type: 'file' },
+        { name: 'useAuth.ts', type: 'file' },
+        { name: 'useBarbers.ts', type: 'file' },
+        { name: 'useBarbershop.ts', type: 'file' },
+        { name: 'useClients.ts', type: 'file' },
+        { name: 'useDashboard.ts', type: 'file' },
+        { name: 'useFinancial.ts', type: 'file' },
+        { name: 'useLoyalty.ts', type: 'file' },
+        { name: 'useServiceCategories.ts', type: 'file' },
+        { name: 'useServices.ts', type: 'file' },
+        { name: 'useStock.ts', type: 'file' },
+        { name: 'useTheme.ts', type: 'file' },
+        { name: 'useToast.ts', type: 'file' },
+      ]},
+      { name: 'lib', type: 'dir', children: [
+        { name: 'date-utils.ts', type: 'file' },
+        { name: 'export-utils.ts', type: 'file' },
+        { name: 'firebase.ts', type: 'file' },
+        { name: 'permissions.ts', type: 'file' },
+        { name: 'utils.ts', type: 'file' },
+        { name: 'whatsapp.ts', type: 'file' },
+      ]},
+      { name: 'middleware.ts', type: 'file' },
+      { name: 'services', type: 'dir', children: [
+        { name: 'appointment.service.ts', type: 'file' },
+        { name: 'barber-storage.service.ts', type: 'file' },
+        { name: 'barber.service.ts', type: 'file' },
+        { name: 'barbershop.service.ts', type: 'file' },
+        { name: 'category.service.ts', type: 'file' },
+        { name: 'client-storage.service.ts', type: 'file' },
+        { name: 'client.service.ts', type: 'file' },
+        { name: 'dashboard.service.ts', type: 'file' },
+        { name: 'financial.service.ts', type: 'file' },
+        { name: 'loyalty.service.ts', type: 'file' },
+        { name: 'notification.service.ts', type: 'file' },
+        { name: 'public.service.ts', type: 'file' },
+        { name: 'report.service.ts', type: 'file' },
+        { name: 'service.service.ts', type: 'file' },
+        { name: 'stock.service.ts', type: 'file' },
+        { name: 'supplier.service.ts', type: 'file' },
+        { name: 'upload.service.ts', type: 'file' },
+      ]},
+      { name: 'types', type: 'dir', children: [
+        { name: 'appointment.ts', type: 'file' },
+        { name: 'barber.ts', type: 'file' },
+        { name: 'client.ts', type: 'file' },
+        { name: 'dashboard.ts', type: 'file' },
+        { name: 'financial.ts', type: 'file' },
+        { name: 'index.ts', type: 'file' },
+        { name: 'loyalty.ts', type: 'file' },
+        { name: 'service.ts', type: 'file' },
+        { name: 'stock.ts', type: 'file' },
+      ]},
+      { name: 'validations', type: 'dir', children: [
+        { name: 'auth.ts', type: 'file' },
+      ]},
+    ]},
+    { name: 'scratch', type: 'dir', children: [
+      { name: 'fix_hooks.js', type: 'file' },
+      { name: 'fix_hooks2.js', type: 'file' },
+      { name: 'remove_toasts.js', type: 'file' },
+    ]},
+  ]
+};
+
+const FILE_PREVIEWS = {
+  'package.json': `{
+  "name": "navallia",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.x",
+    "react": "^18",
+    "firebase": "^10",
+    "tailwindcss": "^3"
+  }
+}`,
+  'next.config.ts': `import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  // config options here
+}
+
+export default nextConfig`,
+  'tailwind.config.ts': `import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {}
+  },
+  plugins: []
+}
+
+export default config`,
+  'middleware.ts': `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  // Route protection logic
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/((?!_next|api|favicon).*)']
+}`,
+};
+
+let openTabs = [];
+let activeTab = null;
+let selectedItem = null;
+
+function buildTree(node, depth, path) {
+  const items = [];
+  if (node.children) {
+    for (const child of node.children) {
+      const childPath = path ? path + '/' + child.name : child.name;
+      const isDir = child.type === 'dir';
+      const itemEl = document.createElement('div');
+      itemEl.className = 'tree-item';
+      itemEl.dataset.path = childPath;
+      itemEl.dataset.isDir = isDir;
+      itemEl.dataset.name = child.name;
+
+      const indentEl = document.createElement('span');
+      indentEl.className = 'indent';
+      indentEl.style.width = (depth * 12) + 'px';
+
+      const arrowEl = document.createElement('span');
+      arrowEl.className = 'arrow ' + (isDir ? (child.open ? 'open' : '') : 'leaf');
+      arrowEl.textContent = isDir ? '▶' : '';
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'file-icon';
+      iconEl.textContent = getIcon(child.name, isDir);
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'label';
+      labelEl.textContent = child.name;
+
+      itemEl.appendChild(indentEl);
+      itemEl.appendChild(arrowEl);
+      itemEl.appendChild(iconEl);
+      itemEl.appendChild(labelEl);
+
+      if (isDir) {
+        const childrenContainer = document.createElement('div');
+        childrenContainer.dataset.parent = childPath;
+        childrenContainer.style.display = child.open ? 'block' : 'none';
+
+        const childItems = buildTree(child, depth + 1, childPath);
+        childItems.forEach(c => childrenContainer.appendChild(c));
+
+        itemEl.addEventListener('click', () => {
+          const isOpen = arrowEl.classList.contains('open');
+          arrowEl.classList.toggle('open', !isOpen);
+          childrenContainer.style.display = isOpen ? 'none' : 'block';
+          selectItem(itemEl);
+        });
+
+        items.push(itemEl, childrenContainer);
+      } else {
+        itemEl.addEventListener('click', () => {
+          selectItem(itemEl);
+          openFile(child.name, childPath);
+        });
+        items.push(itemEl);
+      }
+    }
+  }
+  return items;
+}
+
+function selectItem(el) {
+  if (selectedItem) selectedItem.classList.remove('selected');
+  el.classList.add('selected');
+  selectedItem = el;
+}
+
+function openFile(name, path) {
+  if (!openTabs.find(t => t.path === path)) {
+    openTabs.push({ name, path });
+  }
+  activeTab = path;
+  renderTabs();
+  renderEditor(name, path);
+}
+
+function closeTab(path, e) {
+  e.stopPropagation();
+  openTabs = openTabs.filter(t => t.path !== path);
+  if (activeTab === path) {
+    activeTab = openTabs.length ? openTabs[openTabs.length - 1].path : null;
+  }
+  renderTabs();
+  if (activeTab) {
+    const t = openTabs.find(t => t.path === activeTab);
+    if (t) renderEditor(t.name, t.path);
+  } else {
+    showWelcome();
+  }
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  openTabs.forEach(t => {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (t.path === activeTab ? ' active' : '');
+    tab.innerHTML = '<span>' + getIcon(t.name, false) + '</span><span>' + t.name + '</span><span class="close" data-path="' + t.path + '">×</span>';
+    tab.querySelector('.close').addEventListener('click', (e) => closeTab(t.path, e));
+    tab.addEventListener('click', () => { activeTab = t.path; renderTabs(); renderEditor(t.name, t.path); });
+    tabs.appendChild(tab);
+  });
+}
+
+function renderEditor(name, path) {
+  const bc = document.getElementById('breadcrumb');
+  const parts = path.split('/');
+  bc.style.display = 'flex';
+  bc.innerHTML = parts.map((p, i) =>
+    '<span>' + p + '</span>' + (i < parts.length - 1 ? '<span class="sep">›</span>' : '')
+  ).join('');
+
+  const content = document.getElementById('editorContent');
+  const text = FILE_PREVIEWS[name] || getGenericPreview(name, path);
+  const lines = text.split('\n');
+
+  let result = '<div class="code-area">';
+  lines.forEach((line, i) => {
+    const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    result += '<div class="code-line"><span class="line-num">' + (i + 1) + '</span><span class="line-content">' + escaped + '</span></div>';
+  });
+  result += '</div>';
+  content.innerHTML = result;
+  document.getElementById('statusFile').textContent = getFileType(name) + ' — ' + path;
+}
+
+function getFileType(name) {
+  const ext = name.split('.').pop();
+  const map = { tsx: 'TypeScript React', ts: 'TypeScript', js: 'JavaScript', jsx: 'JavaScript React', json: 'JSON', css: 'CSS', md: 'Markdown', html: 'HTML', svg: 'SVG', mjs: 'JavaScript Module' };
+  return map[ext] || ext.toUpperCase();
+}
+
+function getGenericPreview(name, path) {
+  const ext = name.split('.').pop();
+  if (['ts', 'tsx'].includes(ext)) return '// ' + path + '\n// Abra o arquivo no editor para visualizar o conteúdo';
+  if (ext === 'json') return '{\n  // ' + name + '\n}';
+  return '// ' + name;
+}
+
+function showWelcome() {
+  document.getElementById('breadcrumb').style.display = 'none';
+  document.getElementById('editorContent').innerHTML =
+    '<div class="welcome"><div class="big-icon">⚓</div><h2>navallia</h2><p>Selecione um arquivo na árvore para visualizar</p></div>';
+}
+
+function setActivity(btn) {
+  document.querySelectorAll('.activity-bar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function filterTree(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('.tree-item').forEach(item => {
+    const name = (item.dataset.name || '').toLowerCase();
+    item.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+  if (q) {
+    document.querySelectorAll('[data-parent]').forEach(c => c.style.display = 'block');
+  } else {
+    document.querySelectorAll('[data-parent]').forEach(c => {
+      const parentPath = c.dataset.parent;
+      const parentItem = document.querySelector('.tree-item[data-path="' + parentPath + '"]');
+      if (parentItem) {
+        const arrow = parentItem.querySelector('.arrow');
+        c.style.display = arrow && arrow.classList.contains('open') ? 'block' : 'none';
+      }
+    });
+  }
+}
+
+// Build tree
+const treeEl = document.getElementById('tree');
+const items = buildTree(FS, 0, '');
+items.forEach(el => treeEl.appendChild(el));
+</script>
+</body>
+</html>

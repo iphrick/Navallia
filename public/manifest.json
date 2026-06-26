@@ -1,0 +1,17 @@
+{
+  "name": "Navallia SaaS",
+  "short_name": "Navallia",
+  "description": "Sistema de Gestão para Barbearias",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

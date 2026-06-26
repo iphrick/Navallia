@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Industrial Barbershop Theme (always dark) ── */
+    --background:       9 9% 9%;          /* #171717 charcoal */
+    --foreground:       0 0% 100%;        /* #FFFFFF */
+
+    --card:             0 0% 11%;         /* #1C1C1C */
+    --card-foreground:  0 0% 100%;
+
+    --popover:          0 0% 11%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Leather brown primary */
+    --primary:          26 84% 31%;       /* #92400E */
+    --primary-foreground: 43 57% 91%;     /* #F5F5DC beige */
+
+    --secondary:        0 0% 25%;         /* #404040 */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted:            0 0% 15%;         /* #262626 */
+    --muted-foreground: 0 0% 64%;         /* #A3A3A3 */
+
+    --accent:           26 84% 31%;       /* brown glow */
+    --accent-foreground: 43 57% 91%;
+
+    --destructive:      0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:           0 0% 18%;         /* #2E2E2E */
+    --input:            0 0% 18%;
+    --ring:             26 84% 31%;
+
+    --radius: 0.5rem;
+
+    /* Industrial highlight */
+    --beige:            43 57% 91%;       /* #F5F5DC */
+    --leather:          26 84% 31%;       /* #92400E */
+    --steel:            0 0% 25%;         /* #404040 */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Subtle noise texture */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3 {
+    font-family: 'Oswald', 'Inter', sans-serif;
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer utilities {
+  /* ── Sidebar navigation items ── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer;
+  }
+
+  .sidebar-item-active {
+    background-color: hsl(var(--leather));
+    color: hsl(var(--beige));
+    box-shadow: inset 0 0 0 1px rgba(245, 245, 220, 0.1);
+  }
+
+  .sidebar-item-inactive {
+    @apply text-neutral-500 hover:text-neutral-200;
+  }
+
+  .sidebar-item-inactive:hover {
+    background-color: rgba(245, 245, 220, 0.05);
+    color: #F5F5DC;
+  }
+
+  /* ── Industrial KPI card ── */
+  .card-stat {
+    @apply relative overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  /* ── Industrial card ── */
+  .industrial-card {
+    background: linear-gradient(135deg, hsl(0 0% 12%) 0%, hsl(0 0% 10%) 100%);
+    border: 1px solid hsl(0 0% 20%);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* ── Brushed-metal top accent ── */
+  .card-leather-accent {
+    border-top: 2px solid hsl(var(--leather));
+  }
+
+  /* ── Page container ── */
+  .page-container {
+    @apply flex flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full;
+  }
+
+  /* ── Beige text ── */
+  .text-beige {
+    color: #F5F5DC;
+  }
+
+  /* ── Leather badge ── */
+  .badge-vip {
+    background: rgba(146, 64, 14, 0.15);
+    border: 1px solid rgba(146, 64, 14, 0.4);
+    color: #D97706;
+    @apply text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 22%);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--leather) / 0.6);
+}
+
+/* ── Animations ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Industrial divider ── */
+.divider-industrial {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 22%) 30%, hsl(0 0% 22%) 70%, transparent);
+}

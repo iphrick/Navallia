@@ -1,0 +1,317 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ────────────────────────────────────────────────────
+
+    // Check if the requesting user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the requesting user's document from Firestore
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if the user belongs to the given barbershop
+    function belongsToBarbershop(barbershopId) {
+      return isAuthenticated() && getUserData().barbershopId == barbershopId;
+    }
+
+    // Check if the user has a specific role in their barbershop
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    // Check if the user is an owner
+    function isOwner() {
+      return hasRole('owner');
+    }
+
+    // Check if the user is a manager or higher
+    function isManagerOrAbove() {
+      return isAuthenticated() && (getUserData().role == 'owner' || getUserData().role == 'manager');
+    }
+
+    // Check if the user is the SaaS master admin
+    function isMaster() {
+      return isAuthenticated() && getUserData().role == 'master';
+    }
+
+    // Master has full access to everything in the database
+    match /{document=**} {
+      allow read, write: if isMaster();
+    }
+
+    // ─── barbershops ──────────────────────────────────────────────────────────
+
+    match /barbershops/{barbershopId} {
+      // Leitura pública para a página de agendamento online
+      allow read: if true;
+
+      // Only the owner who created it can update it
+      // OR if it's pending, an authenticated user can claim it
+      allow update: if isAuthenticated()
+        && (resource.data.ownerId == request.auth.uid || (resource.data.ownerId == 'pending' && request.resource.data.ownerId == request.auth.uid));
+
+      // Only the owner can delete (enforced also at app level via hasPermission)
+      allow delete: if isAuthenticated()
+        && resource.data.ownerId == request.auth.uid;
+
+      // Any authenticated user can create a barbershop (during onboarding)
+      // Segurança: Obrigatório definir a si mesmo como dono ou pendente (master)
+      allow create: if isAuthenticated()
+        && (request.resource.data.ownerId == request.auth.uid || request.resource.data.ownerId == 'pending');
+    }
+
+    // ─── invites ──────────────────────────────────────────────────────────────
+    
+    match /invites/{inviteId} {
+      // Qualquer um pode ler um convite para ver se é válido
+      allow read: if true;
+      // Autenticado pode marcar o convite como usado
+      allow update: if isAuthenticated() 
+        && resource.data.status == 'pending' 
+        && request.resource.data.status == 'used'
+        && request.resource.data.usedBy == request.auth.uid;
+    }
+
+    // ─── users ────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Users can read their own document
+      // Owners/Managers can read users in their barbershop
+      allow read: if isAuthenticated()
+        && (request.auth.uid == userId
+          || (getUserData().barbershopId == resource.data.barbershopId
+              && isManagerOrAbove()));
+
+      // Users can only update their own document
+      // Segurança: Prevenir alteração de cargo (role) e barbearia após o cadastro inicial
+      // Permite alterar barbershopId apenas se estiver vazio (durante o onboarding)
+      allow update: if isAuthenticated() && request.auth.uid == userId
+        && (
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'barbershopId']))
+          || (!('barbershopId' in resource.data) || resource.data.barbershopId == "")
+        );
+
+      // Any authenticated user can create their own user doc (during registration)
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+
+      // Only owners can delete users
+      allow delete: if isAuthenticated()
+        && isOwner()
+        && getUserData().barbershopId == resource.data.barbershopId;
+    }
+
+    // ─── clients ─────────────────────────────────────────────────────────────
+
+    match /clients/{clientId} {
+      // Permitir leitura/criação anônima para o funil de agendamento público
+      allow read: if true;
+      
+      allow create: if request.resource.data.barbershopId != null;
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        // Apenas managers/owners podem inativar (deleção lógica)
+        && (request.resource.data.active == true || isManagerOrAbove());
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+    }
+
+    // ─── services ────────────────────────────────────────────────────────────
+
+    match /services/{serviceId} {
+      // Leitura pública para seleção de serviço
+      allow read: if true;
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── service_categories ──────────────────────────────────────────────────
+
+    match /service_categories/{categoryId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── barbers ─────────────────────────────────────────────────────────────
+
+    match /barbers/{barberId} {
+      // Leitura pública para seleção do barbeiro
+      allow read: if true;
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && (isManagerOrAbove() || request.auth.uid == barberId);
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── barber_goals ────────────────────────────────────────────────────────
+
+    match /barber_goals/{goalId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create, update: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── appointments ─────────────────────────────────────────────────────────
+
+    match /appointments/{appointmentId} {
+      // Leitura pública para checar blocos livres (calculo de agenda)
+      allow read: if true;
+
+      // Criação pública do agendamento
+      allow create: if request.resource.data.barbershopId != null;
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+    }
+
+    // ─── products (estoque) ───────────────────────────────────────────────────
+
+    match /products/{productId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── transactions (financeiro) ────────────────────────────────────────────
+
+    match /transactions/{transactionId} {
+      // Only owners and managers can access financial data
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId);
+
+      allow update: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    // ─── Módulo 9: Estoque ───────────────────────────────────────────────────
+
+    match /products/{productId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create, update: if isAuthenticated()
+        && (belongsToBarbershop(resource.data.barbershopId) || belongsToBarbershop(request.resource.data.barbershopId))
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create, update: if isAuthenticated()
+        && (belongsToBarbershop(resource.data.barbershopId) || belongsToBarbershop(request.resource.data.barbershopId))
+        && isManagerOrAbove();
+
+      allow delete: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId)
+        && isOwner();
+    }
+
+    match /stock_movements/{movementId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow create: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+
+      allow update, delete: if false; // Movimentações de estoque não podem ser alteradas nem deletadas
+    }
+
+    // ─── Módulo 10: Fidelidade (Loyalty) ─────────────────────────────────────
+
+    match /loyalty/{loyaltyId} {
+      allow read: if isAuthenticated()
+        && belongsToBarbershop(resource.data.barbershopId);
+
+      allow write: if isAuthenticated()
+        && belongsToBarbershop(request.resource.data.barbershopId)
+        && isManagerOrAbove();
+    }
+  }
+}
