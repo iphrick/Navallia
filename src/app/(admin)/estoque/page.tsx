@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Package, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { Plus, Package, AlertTriangle, ArrowUpDown, FileText } from "lucide-react";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -30,9 +30,16 @@ export default function EstoquePage() {
       description="Gerencie seus produtos, custos e reposições."
       actions={
         role !== "barber" && (
-          <Link href="/estoque/novo">
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Novo Produto</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/estoque/importar-nfe">
+              <Button size="sm" variant="outline">
+                <FileText className="mr-2 h-4 w-4" /> Importar NF-e
+              </Button>
+            </Link>
+            <Link href="/estoque/novo">
+              <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Novo Produto</Button>
+            </Link>
+          </div>
         )
       }
     >

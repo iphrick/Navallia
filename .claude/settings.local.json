@@ -9,7 +9,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(rm -f .git/index.lock)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
+      "Bash(git push *)"
     ]
   }
 }
