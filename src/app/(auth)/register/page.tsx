@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Zap, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { RazorIcon } from "@/components/ui/RazorIcon";
 import { registerSchema, type RegisterFormData } from "@/validations/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
@@ -52,7 +53,7 @@ function RegisterForm() {
       {/* Logo */}
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-blue-600/30">
-          <Zap className="h-7 w-7 text-white" />
+          <RazorIcon className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white">Navallia</h1>

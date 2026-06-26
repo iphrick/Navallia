@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Zap, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { RazorIcon } from "@/components/ui/RazorIcon";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/validations/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { getFirebaseErrorMessage } from "@/lib/utils";
@@ -39,7 +40,7 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col items-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-blue-600/30">
-            <Zap className="h-7 w-7 text-white" />
+            <RazorIcon className="h-8 w-8 text-white" />
           </div>
         </div>
 
@@ -73,7 +74,7 @@ export default function ForgotPasswordPage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-blue-600/30">
-          <Zap className="h-7 w-7 text-white" />
+          <RazorIcon className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white">Navallia</h1>
